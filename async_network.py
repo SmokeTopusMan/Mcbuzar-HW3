@@ -21,12 +21,14 @@ class AsynchronicNeuralNetwork(NeuralNetwork):
 
     def fit(self, training_data, validation_data=None):
         # MPI setup
-        MPI.Init()
+        if not MPI.Is_initialized():
+            MPI.Init()
         self.comm = MPI.COMM_WORLD
         self.rank = self.comm.Get_rank()
         self.size = self.comm.Get_size()
         self.num_workers = self.size - self.num_masters
         self.layers_per_master = self.num_layers // self.num_masters
+        print(f"Process {self.rank}: num_layers={self.num_layers}, len(weights)={len(self.weights)}", flush=True)
 
         # split up work
         if self.rank < self.num_masters:
@@ -45,6 +47,7 @@ class AsynchronicNeuralNetwork(NeuralNetwork):
         """
         # setting up the number of batches the worker should do every epoch
         # TODO: add your code
+        print(f"Worker {self.rank} starting", flush=True)
         batches_per_worker = self.number_of_batches // self.num_workers
     
         for epoch in range(self.epochs):
@@ -81,6 +84,7 @@ class AsynchronicNeuralNetwork(NeuralNetwork):
         :param validation_data: a tuple of data and labels to train the NN with
         """
         # setting up the layers this master does
+        print(f"Master {self.rank} starting", flush=True)
         nabla_w = []
         nabla_b = []
         for i in range(self.rank, self.num_layers, self.num_masters):
@@ -88,7 +92,8 @@ class AsynchronicNeuralNetwork(NeuralNetwork):
             nabla_b.append(np.zeros_like(self.biases[i]))
 
         for epoch in range(self.epochs):
-            for batch in range(self.number_of_batches):
+            batches_to_process = (self.number_of_batches // self.num_workers) * self.num_workers
+            for batch in range(batches_to_process):
 
                 # wait for any worker to finish batch and
                 # get the nabla_w, nabla_b for the master's layers

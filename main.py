@@ -8,6 +8,18 @@ from sync_network import *
 from async_network import *
 
 
+import mpi4py
+mpi4py.rc(initialize=False, finalize=False)
+from mpi4py import MPI
+
+# At the top of main.py, before everything else
+if not MPI.Is_initialized():
+    MPI.Init()
+
+comm = MPI.COMM_WORLD
+rank = comm.Get_rank()
+
+
 def print_use():
     print("to run sync network use the command srun -K -c 4 -n X --pty python3 main.py sync")
     print("to run async network use the command srun -K  -c 4 -n X --pty python3 main.py async M")
@@ -35,23 +47,25 @@ epochs = 5
 # initialize training, validation and testing data
 training_data, validation_data, test_data = load_mnist()
 
-start1 = time()
 
-print("Running regular neural network")
-# initialize neuralnet
-nn = NeuralNetwork(layers, learning_rate, mini_batch_size, batch_size, epochs)
+if rank == 0:
+    start1 = time()
 
-# training neural network
-nn.fit(training_data, validation_data)
+    print("Running regular neural network")
+    # initialize neuralnet
+    nn = NeuralNetwork(layers, learning_rate, mini_batch_size, batch_size, epochs)
 
-stop1 = time()
+    # training neural network
+    nn.fit(training_data, validation_data)
 
-print('Time reg:', stop1 - start1)
+    stop1 = time()
 
-# testing neural network
+    print('Time reg:', stop1 - start1)
 
-accuracy = nn.validate(test_data) / 100.0
-print("Test Accuracy: " + str(accuracy) + "%")
+    # testing neural network
+
+    accuracy = nn.validate(test_data) / 100.0
+    print("Test Accuracy: " + str(accuracy) + "%")
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 if sys.argv[1] == "sync":
@@ -95,4 +109,4 @@ if sys.argv[1] == "async":
     # testing neural network
 
     accuracy = nn.validate(test_data) / 100.0
-    print("Test Accuracy: " + str(accuracy) + "%")
+    print(f"Test Accuracy for process {rank}: " + str(accuracy) + "%")
