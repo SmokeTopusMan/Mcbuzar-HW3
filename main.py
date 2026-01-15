@@ -36,6 +36,8 @@ epochs = 5
 training_data, validation_data, test_data = load_mnist()
 
 start1 = time()
+
+print("Running regular neural network")
 # initialize neuralnet
 nn = NeuralNetwork(layers, learning_rate, mini_batch_size, batch_size, epochs)
 
@@ -54,6 +56,8 @@ print("Test Accuracy: " + str(accuracy) + "%")
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 if sys.argv[1] == "sync":
     start1 = time()
+    print("Running sync neural network")
+
     # initialize neuralnet
     nn = SynchronicNeuralNetwork(layers, learning_rate, mini_batch_size, batch_size, epochs)
 
@@ -78,6 +82,7 @@ if sys.argv[1] == "async":
     masters = int(sys.argv[2])
 
     start1 = time()
+    print("Running async neural network")
     # initialize neuralnet
     nn = AsynchronicNeuralNetwork(layers, learning_rate, mini_batch_size, batch_size, epochs, masters)
 
