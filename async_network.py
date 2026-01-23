@@ -47,7 +47,7 @@ class AsynchronicNeuralNetwork(NeuralNetwork):
         # setting up the number of batches the worker should do every epoch
         # TODO: add your code
         batches_per_worker = self.number_of_batches // self.num_workers
-    
+
         for epoch in range(self.epochs):
             # creating batches for epoch
             data = training_data[0]
@@ -66,15 +66,16 @@ class AsynchronicNeuralNetwork(NeuralNetwork):
                     req_b = self.comm.Isend(nabla_b[layer_idx], dest=master_rank, tag=layer_idx + self.num_layers)
                     reqs.append(req_w)
                     reqs.append(req_b)
-                
+
                 # recieve new self.weight and self.biases values from masters
                 for layer_idx in range(self.num_layers):
                     master_rank = layer_idx % self.num_masters
-                    self.comm.Recv(self.weights[layer_idx], source=master_rank, tag=layer_idx)
-                    self.comm.Recv(self.biases[layer_idx], source=master_rank, tag=layer_idx + self.num_layers)
+                    req_w_recv = self.comm.Irecv(self.weights[layer_idx], source=master_rank, tag=layer_idx)
+                    req_b_recv = self.comm.Irecv(self.biases[layer_idx], source=master_rank, tag=layer_idx + self.num_layers)
+                    reqs.append(req_w_recv)
+                    reqs.append(req_b_recv)
 
-                for req in reqs:
-                    req.Wait()
+                MPI.Request.Waitall(reqs)
 
     def do_master(self, validation_data):
         """
@@ -119,8 +120,7 @@ class AsynchronicNeuralNetwork(NeuralNetwork):
                     reqs.append(req_w)
                     reqs.append(req_b)
 
-                for req in reqs:
-                    req.Wait()
+                MPI.Request.Waitall(reqs)
 
             self.print_progress(validation_data, epoch)
 
